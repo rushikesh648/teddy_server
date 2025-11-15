@@ -1,0 +1,6 @@
+Step,Action by Client (Browser),Action by Teddy Server (Low-Level)
+1.,Sends a specific HTTP GET request with upgrade headers.,Reads the incoming TCP data using read().
+2.,Includes the header: Sec-WebSocket-Key: [24-byte key],Parses the HTTP request to extract the Sec-WebSocket-Key.
+3.,Waits for the 101 Switching Protocols response.,"Concatenates the key with the ""magic string"" (a UUID: 258EAFA5−E914−47DA−95CA−C5AB0DC85B11)."
+4.,Starts sending WebSocket frames.,"SHA-1 hashes the resulting string, then Base64 encodes the hash."
+5.,N/A,"Sends a HTTP/1.1 101 Switching Protocols response, including the Sec-WebSocket-Accept header with the calculated Base64 hash."
