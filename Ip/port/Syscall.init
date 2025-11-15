@@ -1,0 +1,84 @@
+section .text
+    global _start
+    
+; --- Syscall Registers for x86-64 Linux ---
+; RAX: Syscall Number | RDI: Arg 1 | RSI: Arg 2 | RDX: Arg 3
+
+_start:
+    ; ==================================
+    ; 1. socket() call: Create a new socket file descriptor (FD)
+    ; fd = socket(AF_INET, SOCK_STREAM, 0)
+    ; ==================================
+    mov rax, 41         ; Syscall number for socket
+    mov rdi, AF_INET    ; Arg 1: AF_INET (2)
+    mov rsi, SOCK_STREAM; Arg 2: SOCK_STREAM (1)
+    mov rdx, 0          ; Arg 3: Protocol (0 for default)
+    syscall             ; Execute socket()
+    mov r12, rax        ; Store the returned socket FD in R12 (non-volatile)
+    
+    ; *** Add code here to check for error (RAX < 0) ***
+
+    ; ==================================
+    ; 2. bind() call: Assign the FD to the local address and port
+    ; bind(fd, &server_addr, addr_len)
+    ; ==================================
+    mov rax, 49         ; Syscall number for bind
+    mov rdi, r12        ; Arg 1: Socket FD
+    mov rsi, server_addr; Arg 2: Address of sockaddr_in structure
+    mov rdx, addr_len   ; Arg 3: Size of structure (16)
+    syscall
+    
+    ; *** Add code here to check for error (RAX < 0) ***
+
+    ; ==================================
+    ; 3. listen() call: Put the socket into listening mode
+    ; listen(fd, backlog_size)
+    ; ==================================
+    mov rax, 50         ; Syscall number for listen
+    mov rdi, r12        ; Arg 1: Socket FD
+    mov rsi, 10         ; Arg 2: Backlog size (max pending connections)
+    mov rdx, 0          ; (unused)
+    syscall
+    
+    ; *** Add code here to check for error (RAX < 0) ***
+
+    ; ==================================
+    ; 4. Output Status
+    ; write(stdout, listen_msg, listen_len)
+    ; ==================================
+    mov rax, 1          ; Syscall number for write
+    mov rdi, 1          ; Arg 1: File descriptor (stdout)
+    mov rsi, listen_msg ; Arg 2: Address of message
+    mov rdx, listen_len ; Arg 3: Length of message
+    syscall
+
+    ; --- The server is now listening. Next step is the accept loop ---
+    
+accept_loop:
+    ; ==================================
+    ; 5. accept() call: Block and wait for a new client connection
+    ; client_fd = accept(server_fd, NULL, NULL)
+    ; ==================================
+    mov rax, 43         ; Syscall number for accept
+    mov rdi, r12        ; Arg 1: Server Socket FD
+    mov rsi, 0          ; Arg 2: Client address struct (NULL)
+    mov rdx, 0          ; Arg 3: Client address length (NULL)
+    syscall
+    
+    mov r13, rax        ; Store the new client FD in R13
+
+    ; *** CALL a subroutine to handle R13 (client_fd) here ***
+    ; mov rdi, r13
+    ; call handle_client
+
+    ; *** CLOSE the client FD ***
+    mov rax, 3          ; Syscall number for close
+    mov rdi, r13        ; Client Socket FD
+    syscall
+
+    jmp accept_loop     ; Loop back to wait for the next client
+
+    ; --- Program exit (only reachable if the accept loop is broken) ---
+    mov rax, 60         ; syscall: exit
+    xor rdi, rdi        ; status: 0
+    syscall
